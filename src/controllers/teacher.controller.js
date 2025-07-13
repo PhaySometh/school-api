@@ -65,22 +65,26 @@ export const registerTeacher = async (req, res) => {
     const { name, department, email, password } = req.body;
 
     if (!name || !department || !email || !password) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
+        return res
+            .status(400)
+            .json({ success: false, message: 'Missing required fields' });
     }
     try {
         const query = await db.Teacher.findOne({
             where: { name: name, department: department, email: email },
-            attributes: ['id']
+            attributes: ['id'],
         });
         if (query) {
-            return res.status(409).json({ success: false, message: 'Teacher already exists' });
+            return res
+                .status(409)
+                .json({ success: false, message: 'Teacher already exists' });
         }
         const hashedPassword = await bcrypt.hash(req.body.password, 10);
         const newTeacher = await db.Teacher.create({
             name: name,
             department: department,
             email: email,
-            password_hash: hashedPassword
+            password_hash: hashedPassword,
         });
         return res.status(201).json({
             success: true,
@@ -89,13 +93,13 @@ export const registerTeacher = async (req, res) => {
                 id: newTeacher.id,
                 name: newTeacher.name,
                 department: newTeacher.department,
-                email: newTeacher.email
-            }
-        })
+                email: newTeacher.email,
+            },
+        });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
     }
-}
+};
 /**
  * @swagger
  * /teachers/login:
@@ -134,39 +138,47 @@ export const registerTeacher = async (req, res) => {
 export const loginTeacher = async (req, res) => {
     const { email, password, name } = req.body;
     if (!email || !password) {
-        return res.status(400).json({ success: false, message: 'Missing required fields' });
-    } 
+        return res
+            .status(400)
+            .json({ success: false, message: 'Missing required fields' });
+    }
     try {
         const teacher = await db.Teacher.findOne({
-            where: { email: email},
-            attributes: ['id', 'email', 'password_hash']
-        })
+            where: { email: email },
+            attributes: ['id', 'email', 'name', 'password_hash'],
+        });
 
         if (!teacher) {
-            return res.status(401).json({ success: false, message: 'Password or email already exist' });
+            return res
+                .status(401)
+                .json({
+                    success: false,
+                    message: 'Password or email already exist',
+                });
         }
 
         const isMatch = await bcrypt.compare(password, teacher.password_hash);
         if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid Password' });
+            return res
+                .status(401)
+                .json({ success: false, message: 'Invalid Password' });
         }
 
-        const payload = { 
-            email: teacher.email, 
+        const payload = {
+            email: teacher.email,
             name: teacher.name,
-            id: teacher.id
-        }
+            id: teacher.id,
+        };
 
         const token = jwt.sign(payload, process.env.JWT_SECRET_TOKEN, {
-            expiresIn: '1h'
-        })
+            expiresIn: '1h',
+        });
 
         return res.json({ success: true, accessToken: token });
     } catch (err) {
         return res.status(500).json({ success: false, message: err.message });
     }
-    
-}
+};
 
 /**
  * @swagger
@@ -286,15 +298,27 @@ export const getAllTeachers = async (req, res) => {
 
     // Validate query parameters
     if (limit <= 0 || page <= 0) {
-        return res.status(400).json({ error: 'Limit and page must be positive integers.' });
+        return res
+            .status(400)
+            .json({ error: 'Limit and page must be positive integers.' });
     }
     if (!['ASC', 'DESC'].includes(sort)) {
-        return res.status(400).json({ error: 'Invalid sort value. Use "asc" or "desc".' });
+        return res
+            .status(400)
+            .json({ error: 'Invalid sort value. Use "asc" or "desc".' });
     }
     const validRelations = ['courseId'];
-    const invalidRelations = populate.filter(rel => !validRelations.includes(rel));
+    const invalidRelations = populate.filter(
+        (rel) => !validRelations.includes(rel)
+    );
     if (invalidRelations.length > 0) {
-        return res.status(400).json({ error: `Invalid populate values: ${invalidRelations.join(', ')}` });
+        return res
+            .status(400)
+            .json({
+                error: `Invalid populate values: ${invalidRelations.join(
+                    ', '
+                )}`,
+            });
     }
 
     // Build include array for eager loading
@@ -309,7 +333,7 @@ export const getAllTeachers = async (req, res) => {
             include: include,
             limit: limit,
             offset: (page - 1) * limit,
-            order: [['createdAt', sort]]
+            order: [['createdAt', sort]],
         });
         res.json({
             data: teachers,
@@ -317,8 +341,8 @@ export const getAllTeachers = async (req, res) => {
                 total: total,
                 page: page,
                 limit: limit,
-                totalPages: Math.ceil(total / limit)
-            }
+                totalPages: Math.ceil(total / limit),
+            },
         });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -382,9 +406,17 @@ export const getTeacherById = async (req, res) => {
 
     // Validate populate parameter
     const validRelations = ['courseId'];
-    const invalidRelations = populate.filter(rel => !validRelations.includes(rel));
+    const invalidRelations = populate.filter(
+        (rel) => !validRelations.includes(rel)
+    );
     if (invalidRelations.length > 0) {
-        return res.status(400).json({ error: `Invalid populate values: ${invalidRelations.join(', ')}` });
+        return res
+            .status(400)
+            .json({
+                error: `Invalid populate values: ${invalidRelations.join(
+                    ', '
+                )}`,
+            });
     }
 
     // Build include array
