@@ -31,6 +31,14 @@ import db from '../models/index.js';
  *       201:
  *         description: Course created
  */
+export const createCourse = async (req, res) => {
+    try {
+        const course = await db.Course.create(req.body);
+        res.status(201).json(course);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
 
 /**
  * @swagger
@@ -47,60 +55,16 @@ import db from '../models/index.js';
  *         name: limit
  *         schema: { type: integer, default: 10 }
  *         description: Number of items per page
- *       - in: query
- *         name: sort
- *         schema:
- *           type: string
- *           enum: [asc, desc]
- *           default: asc
- *         description: Sort order based on createdAt
- *       - in: query
- *         name: populate
- *         schema:
- *           type: string
- *           enum: [teacherId, studentIds]
- *         description: Include related data (teacherId, studentIds)
  *     responses:
  *       200:
  *         description: List of courses
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 data:
- *                   type: array
- *                   items:
- *                     $ref: '#/components/schemas/Course'
- *                 meta:
- *                   type: object
- *                   properties:
- *                     total:
- *                       type: integer
- *                     page:
- *                       type: integer
- *                     limit:
- *                       type: integer
- *                     totalPages:
- *                       type: integer
- *       400:
- *         description: Invalid query parameters
- *       500:
- *         description: Server error
  */
-export const createCourse = async (req, res) => {
-    try {
-        const course = await db.Course.create(req.body);
-        res.status(201).json(course);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-};
-
 export const getAllCourses = async (req, res) => {
+
     const limit = parseInt(req.query.limit) || 10;
     const page = parseInt(req.query.page) || 1;
-    const sort = req.query.sort ? req.query.sort.toUpperCase() : 'ASC'; // Default to ASC if not provided
+    const sort = req.query.sort ? req.query.sort.toUpperCase() : 'ASC';
+    const total = await db.Course.count();
     const populate = req.query.populate ? req.query.populate.split(',') : [];
 
     // Validate sort parameter
@@ -160,9 +124,7 @@ export const getAllCourses = async (req, res) => {
  */
 export const getCourseById = async (req, res) => {
     try {
-        const course = await db.Course.findByPk(req.params.id, {
-            include: [db.Student, db.Teacher],
-        });
+        const course = await db.Course.findByPk(req.params.id, { include: [db.Student, db.Teacher] });
         if (!course) return res.status(404).json({ message: 'Not found' });
         res.json(course);
     } catch (err) {
